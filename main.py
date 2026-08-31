@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from contextlib import AsyncExitStack
 
-from mcp_client import MCPClient
+from mcp_client import MCPClient, silence_proactor_pipe_errors
 from core.claude import Claude
 
 from core.cli_chat import CliChat
@@ -61,5 +61,5 @@ async def main():
 
 if __name__ == "__main__":
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        silence_proactor_pipe_errors()
     asyncio.run(main())

@@ -1,5 +1,7 @@
 import sys
 import asyncio
+import json
+from pydantic import AnyUrl
 from typing import Optional, Any
 from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters, types
@@ -55,8 +57,14 @@ class MCPClient:
         return []
 
     async def read_resource(self, uri: str) -> Any:
-        # TODO: Read a resource, parse the contents and return it
-        return []
+        result = await self.session().read_resource(AnyUrl(uri))
+        resource = result.contents[0]
+
+        if isinstance(resource, types.TextResourceContents):
+            if resource.mimeType == "application/json":
+                return json.loads(resource.text)
+
+            return resource.text
 
     async def cleanup(self):
         await self._exit_stack.aclose()
@@ -80,7 +88,7 @@ async def main():
         print(result)
 
 
-def _silence_proactor_pipe_errors():
+def silence_proactor_pipe_errors():
     """En Windows, el ProactorEventLoop lanza tracebacks inofensivos de
     'I/O operation on closed pipe' al recolectar los transportes de subprocesos
     despues de cerrar el loop. Envolvemos __del__ para ignorar solo ese ruido."""
@@ -107,5 +115,5 @@ def _silence_proactor_pipe_errors():
 
 if __name__ == "__main__":
     if sys.platform == "win32":
-        _silence_proactor_pipe_errors()
+        silence_proactor_pipe_errors()
     asyncio.run(main())
