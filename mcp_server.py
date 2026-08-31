@@ -84,8 +84,29 @@ def format_document(
     """
 
     return [base.UserMessage(prompt)]
-# TODO: Write a prompt to summarize a doc
 
+
+@mcp.prompt(
+    name = "summarize"
+    , description = "Summarizes the contents of the given document."
+)
+def summarize_document(
+    doc_id = Field(description = "ID of the document to format")
+) -> list[base.Message]:
+    prompt = f"""
+    Your goal is to summarize a document.
+
+    The id of the document you need to reformat is:
+
+    <document_id>
+    {doc_id}
+    </document_id>
+
+    Be as concise as you can, but don't change the intended meaning of the report.
+    Use the 'read_doc_contents' tool to read the document contents. After you read it, summarize it as if you were Jar Jar Binks.
+    """
+
+    return [base.UserMessage(prompt)]
 
 if __name__ == "__main__":
     mcp.run(transport = "stdio")
