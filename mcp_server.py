@@ -80,7 +80,7 @@ def format_document(
     </document_id>
 
     Add in headers, bullet points, tables, etc as necessary. Feel free to add in extra formatting to the text, but don't change the meaning of the report.
-    Use the 'edit_document' tool to edit the document. After the document has been reformatted, pass it to the user and say a Star Wars phrase.
+    Use the 'edit_document' tool to edit the document. After the document has been reformatted, pass it to the user with this new format and say a Star Wars phrase at the end.
     """
 
     return [base.UserMessage(prompt)]
