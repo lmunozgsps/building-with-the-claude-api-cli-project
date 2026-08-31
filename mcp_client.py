@@ -21,9 +21,9 @@ class MCPClient:
 
     async def connect(self):
         server_params = StdioServerParameters(
-            command=self._command,
-            args=self._args,
-            env=self._env,
+            command = self._command
+            , args = self._args
+            , env = self._env
         )
         stdio_transport = await self._exit_stack.enter_async_context(
             stdio_client(server_params)
@@ -36,20 +36,15 @@ class MCPClient:
 
     def session(self) -> ClientSession:
         if self._session is None:
-            raise ConnectionError(
-                "Client session not initialized or cache not populated. Call connect_to_server first."
-            )
+            raise ConnectionError("Client session not initialized or cache not populated. Call connect_to_server first.")
         return self._session
 
     async def list_tools(self) -> list[types.Tool]:
-        # TODO: Return a list of tools defined by the MCP server
-        return []
+        result = await self.session().list_tools()
+        return result.tools
 
-    async def call_tool(
-        self, tool_name: str, tool_input: dict
-    ) -> types.CallToolResult | None:
-        # TODO: Call a particular tool and return the result
-        return None
+    async def call_tool(self, tool_name: str, tool_input: dict) -> types.CallToolResult | None:
+        return await self.session().call_tool(tool_name, tool_input)
 
     async def list_prompts(self) -> list[types.Prompt]:
         # TODO: Return a list of prompts defined by the MCP server
@@ -78,14 +73,39 @@ class MCPClient:
 # For testing
 async def main():
     async with MCPClient(
-        # If using Python without UV, update command to 'python' and remove "run" from args.
-        command="uv",
-        args=["run", "mcp_server.py"],
+        command = "uv"
+        , args = ["run", "mcp_server.py"]
     ) as _client:
-        pass
+        result = await _client.list_tools()
+        print(result)
+
+
+def _silence_proactor_pipe_errors():
+    """En Windows, el ProactorEventLoop lanza tracebacks inofensivos de
+    'I/O operation on closed pipe' al recolectar los transportes de subprocesos
+    despues de cerrar el loop. Envolvemos __del__ para ignorar solo ese ruido."""
+    from functools import wraps
+    from asyncio.proactor_events import _ProactorBasePipeTransport
+    from asyncio.base_subprocess import BaseSubprocessTransport
+
+    def _quiet(cls):
+        original_del = cls.__del__
+
+        @wraps(original_del)
+        def _quiet_del(self, *args, **kwargs):
+            try:
+                original_del(self, *args, **kwargs)
+            except (RuntimeError, ValueError) as exc:
+                if str(exc) not in ("Event loop is closed", "I/O operation on closed pipe"):
+                    raise
+
+        cls.__del__ = _quiet_del
+
+    _quiet(_ProactorBasePipeTransport)
+    _quiet(BaseSubprocessTransport)
 
 
 if __name__ == "__main__":
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        _silence_proactor_pipe_errors()
     asyncio.run(main())
